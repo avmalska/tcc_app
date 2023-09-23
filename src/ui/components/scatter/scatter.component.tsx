@@ -19,29 +19,22 @@ const options: ChartOptions<"scatter"> = {
   // },
 };
 
-type Dataset = {
+export type ScatterDataset = {
   label: string,
-  data: number[][]
+  data: {x: number, y: number}[]
   backgroundColor: string
+  pointRadius: number
+  pointHoverRadius: number
 }
 
-type ScatterData = {
-  datasets: Dataset[]
+export type ScatterData = {
+  datasets: ScatterDataset[]
 }
 
 type ScatterInput = {
   data: ScatterData
 }
 
-// const teste: ChartData<"scatter"> = {
-//   datasets: [
-//     {
-//       label: 'A dataset',
-//       data: [1, 2],
-//       backgroundColor: 'rgba(255, 99, 132, 1)',
-//     }
-//   ]
-// }
 
 export function Scatter({data}: ScatterInput) {
   return <ScatterPlot options={options} data={data} />;

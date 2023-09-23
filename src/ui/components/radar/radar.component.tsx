@@ -20,7 +20,7 @@ ChartJS.register(
   Legend
 );
 
-export type Dataset = {
+export type RadarDataset = {
   label: string,
   data: number[],
   backgroundColor: string,
@@ -30,7 +30,7 @@ export type Dataset = {
 
 export type RadarData = {
   labels: string[],
-  datasets: Dataset[]
+  datasets: RadarDataset[]
 }
 
 const options: ChartOptions<"radar"> = {
@@ -45,6 +45,7 @@ const options: ChartOptions<"radar"> = {
 type RadarInput = {
   data: RadarData;
 }
+
 
 export const Radar =  ({data} : RadarInput) => {
   return <RadarChart data={data} options={options}/>
