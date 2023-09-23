@@ -12,25 +12,12 @@ import {ChartProps, Scatter as ScatterPlot} from 'react-chartjs-2';
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend);
 
 const options: ChartOptions<"scatter"> = {
-  scales: {
-    y: {
-      beginAtZero: true,
-    },
-  },
+  // scales: {
+  //   // y: {
+  //   //   beginAtZero: true,
+  //   // },
+  // },
 };
-
-// export const data = {
-//   datasets: [
-//     {
-//       label: 'A dataset',
-//       data: Array.from({ length: 100 }, () => ({
-//         x: faker.datatype.number({ min: -100, max: 100 }),
-//         y: faker.datatype.number({ min: -100, max: 100 }),
-//       })),
-//       backgroundColor: 'rgba(255, 99, 132, 1)',
-//     },
-//   ],
-// };
 
 type Dataset = {
   label: string,
@@ -39,19 +26,23 @@ type Dataset = {
 }
 
 type ScatterData = {
-  dataset: Dataset[]
+  datasets: Dataset[]
 }
 
-const teste: ChartData<"scatter"> = {
-  datasets: [
-    {
-      label: 'A dataset',
-      data: [1, 2],
-      backgroundColor: 'rgba(255, 99, 132, 1)',
-    }
-  ]
+type ScatterInput = {
+  data: ScatterData
 }
 
-export function Scatter(): React.JSX.Element {
-  return <ScatterPlot options={options} data={teste} />;
+// const teste: ChartData<"scatter"> = {
+//   datasets: [
+//     {
+//       label: 'A dataset',
+//       data: [1, 2],
+//       backgroundColor: 'rgba(255, 99, 132, 1)',
+//     }
+//   ]
+// }
+
+export function Scatter({data}: ScatterInput) {
+  return <ScatterPlot options={options} data={data} />;
 }

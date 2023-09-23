@@ -46,7 +46,7 @@ type RadarInput = {
   data: RadarData;
 }
 
-export const Radar: React.FC<RadarInput> = ({data}) => {
+export const Radar =  ({data} : RadarInput) => {
   return <RadarChart data={data} options={options}/>
 }
 

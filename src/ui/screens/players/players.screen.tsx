@@ -1,14 +1,14 @@
 import React, {useEffect, useState} from "react";
-import styles from "./players.module.css"
 import {Player, usePlayerApi} from "../../../hooks/api/players/use-player-api.hook";
 import randomColor from 'randomcolor';
 import {Radar, Dataset, RadarData} from "../../components"
+import Select from "react-dropdown-select"
 
-const radarLabels = ["kdr", "kpr", "awpKpr", "adr", "aud", "kast",
+const radarDefaultLabels = ["kdr", "kpr", "awpKpr", "adr", "aud", "kast",
   "multiKills", "openingRatio", "clutchesRatio", "flashTimeMean", "rating"]
 
 const radarDataDefault: RadarData = {
-  labels: radarLabels,
+  labels: radarDefaultLabels,
   datasets: [
     {
       label: 'Radar',
@@ -24,23 +24,27 @@ export function PlayersScreen() {
 
   const {getAllPlayers} = usePlayerApi();
   const [playersList, setPlayersList] = useState<Player[]>([])
-  const [checkedPlayers, setCheckedPlayers] = useState<Record<string, boolean>>(playersList.reduce((acumulador, player) => {
+  const [radarLabels, setRadarLabels] = useState<Record<string, boolean>>(radarDefaultLabels.reduce((acumulador, label) => {
     return {
       ...acumulador,
-      [player.steamID]: false
+      [label]: true
     }
   }, {}))
+
   const [radarData, setRadarData] = useState<RadarData>(radarDataDefault)
   const [groupRadarData, setGroupRadarData] = useState<RadarData>(radarDataDefault)
 
+  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([])
+
   function getPlayerDataFiltered(player: Player) {
     return Object.entries(player).reduce((acumulador: number[], combo) => {
-      return radarLabels.includes(combo[0]) ? [...acumulador, combo[1]] : [...acumulador]
+      return Object.keys(radarLabels).filter(label => radarLabels[label]).includes(combo[0]) ? [...acumulador, combo[1]] : [...acumulador]
     }, []);
   }
 
+
   useEffect(() => {
-    const playersSelected = playersList.filter(player => checkedPlayers[player.steamID])
+    const playersSelected = playersList.filter(player => selectedPlayers.includes(player.steamID))
     const playersRadarDataset: Dataset[] = playersSelected.map((player => {
       const playerDataFiltered: number[] = getPlayerDataFiltered(player)
       const playerDataset: Dataset = {
@@ -55,14 +59,15 @@ export function PlayersScreen() {
 
     setRadarData({
       ...radarData,
+      labels: Object.keys(radarLabels).filter(label => radarLabels[label]),
       datasets: playersRadarDataset
     })
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [checkedPlayers, playersList]);
+  }, [selectedPlayers, playersList, radarLabels]);
 
   useEffect(() => {
-    const playersSelected = playersList.filter(player => checkedPlayers[player.steamID])
+    const playersSelected = playersList.filter(player => selectedPlayers.includes(player.steamID))
 
     const groupDatasetValues: number[][] = playersSelected.map(player => getPlayerDataFiltered(player))
 
@@ -82,57 +87,73 @@ export function PlayersScreen() {
 
     setGroupRadarData({
       ...groupRadarData,
+      labels: Object.keys(radarLabels).filter(label => radarLabels[label]),
       datasets: groupPlayerRadarDataset
     })
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [checkedPlayers, playersList]);
+  }, [selectedPlayers, playersList, radarLabels]);
 
   useEffect(() => {
     async function getAllPlayersFromPlayersApi(){
       const response = await getAllPlayers();
       return response.map(player => {
-        return {...player, color: randomColor({format: "rgba", alpha: 0.5})}
+        return {...player, color: randomColor({format: "rgba", alpha: 0.8})}
       });
     }
     getAllPlayersFromPlayersApi().then(response => setPlayersList(response));
 
   }, [getAllPlayers])
 
-  function handleCheckedPlayersChange(evento: React.ChangeEvent<HTMLInputElement> ) {
+  function handleRadarLabelsChange(evento: React.ChangeEvent<HTMLInputElement> ) {
     const { name } = evento.target
-    const newCheckedValue = !checkedPlayers[name]
-    const newPlayersCheckedObj = {
-      ...checkedPlayers,
+    const newCheckedValue = !radarLabels[name]
+    const newCheckedLabels = {
+      ...radarLabels,
       [name]: newCheckedValue
     }
-    setCheckedPlayers(newPlayersCheckedObj)
+    setRadarLabels(newCheckedLabels)
   }
 
   return (
-    <div className={styles.playerScreen}>
-      <div className={styles.radar}>
-        <Radar data={radarData}/>
-      </div>
-      <div className={styles.playerCheckbox}>
-        {playersList.map((player, index) => {
-          return (
-            <div className={styles.singlePlayer}>
-              <label htmlFor={player.steamID}>{player.playerName}</label>
-              <input
-                type="checkbox"
-                id={player.steamID}
-                name={player.steamID}
-                value={player.steamID}
-                checked={checkedPlayers[player.steamID]}
-                onChange={handleCheckedPlayersChange}
-              />
-            </div>
-          )
-        })}
-      </div>
-      <div className={styles.radarGroup}>
-        <Radar data={groupRadarData}/>
+    <div className="w-screen h-screen">
+      <div className="flex h-2/3">
+        <div className="w-1/3">
+          <Radar data={radarData}/>
+        </div>
+        <div className="flex flex-col w-1/3">
+          <div>
+            <Select
+              options={playersList}
+              multi={true}
+              labelField={"playerName"}
+              valueField={"steamID"}
+              values={playersList.filter((player) => selectedPlayers.includes(player.steamID))}
+              onChange={(value) => setSelectedPlayers(value.map(player => player.steamID))}
+            />
+          </div>
+
+          <div className="flex flex-col gap-1 overflow-x-scroll w-full h-1/2">
+            {radarDefaultLabels.map((label, index) => {
+              return (
+                <div>
+                  <label htmlFor={label}>{label}</label>
+                  <input
+                    type="checkbox"
+                    id={label}
+                    name={label}
+                    value={label}
+                    checked={radarLabels[label]}
+                    onChange={handleRadarLabelsChange}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        <div className="w-1/3">
+          <Radar data={groupRadarData}/>
+        </div>
       </div>
     </div>
   )

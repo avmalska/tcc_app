@@ -1,10 +1,9 @@
 import React from 'react';
-import styles from './App.module.css';
 import {PlayersScreen} from "./ui/screens";
 
 function App() {
   return (
-    <div className={styles.corpoApp}>
+    <div className="overflow-x-hidden w-full h-screen flex">
       <PlayersScreen/>
     </div>
   );

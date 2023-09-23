@@ -3,7 +3,7 @@ import {useAxios} from "./use-axios.hook";
 export function useHttp(baseUrl: string) {
   const instance = useAxios(baseUrl);
 
-  const get = async (url: string) => {
+  const get = async (url: string = "") => {
     const response =  await instance.get(url);
     return response.data
 };
