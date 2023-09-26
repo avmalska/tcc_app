@@ -5,23 +5,17 @@ import {
   PointElement,
   LineElement,
   Tooltip,
-  Legend, ChartOptions, ChartData,
+  Legend, ChartOptions, ChartData, ChartDataset, ChartEvent, ActiveElement, Chart,
 } from 'chart.js';
 import {ChartProps, Scatter as ScatterPlot} from 'react-chartjs-2';
 
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend);
 
-const options: ChartOptions<"scatter"> = {
-  // scales: {
-  //   // y: {
-  //   //   beginAtZero: true,
-  //   // },
-  // },
-};
+export type ScatterDataPoint = {x: number, y: number, name: string, steamId: string}
 
 export type ScatterDataset = {
   label: string,
-  data: {x: number, y: number}[]
+  data: ScatterDataPoint[]
   backgroundColor: string
   pointRadius: number
   pointHoverRadius: number
@@ -33,9 +27,29 @@ export type ScatterData = {
 
 type ScatterInput = {
   data: ScatterData
+  onclickevent: Function
 }
 
+export function Scatter({data, onclickevent}: ScatterInput) {
 
-export function Scatter({data}: ScatterInput) {
+  const options: ChartOptions<"scatter"> = {
+    onClick(event: ChartEvent, elements: ActiveElement[], chart: Chart) {
+      if (elements.length !== 0) {
+        // @ts-ignore
+        onclickevent(chart.data.datasets[elements[0].datasetIndex].data[elements[0].index]["steamId"])
+      }
+    },
+    plugins: {
+      tooltip: {
+        callbacks: {
+          title(tooltipItem): string | string[] | void {
+            // @ts-ignore
+            return tooltipItem[0].dataset.data[tooltipItem[0].dataIndex]["name"];
+          }
+        }
+      }
+    }
+  };
+
   return <ScatterPlot options={options} data={data} />;
 }

@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from "react";
 import {Player, usePlayerApi} from "../../../hooks/api/players/use-player-api.hook";
 import randomColor from 'randomcolor';
-import {Radar, RadarDataset, RadarData, Scatter, ScatterDataset, ScatterData} from "../../components"
+import {Radar, RadarDataset, RadarData, Scatter, ScatterDataset, ScatterData, ScatterDataPoint} from "../../components"
 import Select from "react-dropdown-select"
 
 const radarDefaultLabels = ["kdr", "kpr", "awpKpr", "adr", "aud", "kast",
@@ -36,7 +36,6 @@ export function PlayersScreen() {
     }
   }, {}))
 
-  const [radarData, setRadarData] = useState<RadarData>(radarDataDefault)
   const [groupRadarData, setGroupRadarData] = useState<RadarData>(radarDataDefault)
 
   const [scatterData, setScatterData] = useState<ScatterData>(scatterDataDefault)
@@ -46,30 +45,6 @@ export function PlayersScreen() {
       return Object.keys(radarLabels).filter(label => radarLabels[label]).includes(combo[0]) ? [...acumulador, combo[1]] : [...acumulador]
     }, []);
   }
-
-
-  // useEffect(() => {
-  //   const playersSelected = playersList.filter(player => selectedPlayers.includes(player.steamID))
-  //   const playersRadarDataset: RadarDataset[] = playersSelected.map((player => {
-  //     const playerDataFiltered: number[] = getPlayerDataFiltered(player)
-  //     const playerDataset: RadarDataset = {
-  //       label: player.playerName,
-  //       data: playerDataFiltered,
-  //       backgroundColor: player.color,
-  //       borderColor: player.color,
-  //       borderWidth: 1
-  //     }
-  //     return playerDataset
-  //   }))
-  //
-  //   setRadarData({
-  //     ...radarData,
-  //     labels: Object.keys(radarLabels).filter(label => radarLabels[label]),
-  //     datasets: playersRadarDataset
-  //   })
-  //
-  //   // eslint-disable-next-line react-hooks/exhaustive-deps
-  // }, [selectedPlayers, playersList, radarLabels]);
 
   useEffect(() => {
     const playersSelected = playersList.filter(player => selectedPlayers.includes(player.steamID))
@@ -113,21 +88,24 @@ export function PlayersScreen() {
   }, [selectedPlayers, playersList, radarLabels]);
 
   useEffect(() => {
-    const clusters = [...new Set(playersList.map(player => player.cluster))];
+    const clusters = [0, 1, 2, 3, 4];
+    const colors = ["#d64949", "#c310e3", "#1b8f83", "#3bf216", "#1f1c1c"]
     const playersScatterDataset: ScatterDataset[] = []
 
     clusters.forEach((group) => {
-      const data = playersList.filter(player => player.cluster === group).map(player => {
+      const data: ScatterDataPoint[] = playersList.filter(player => player.cluster === group).map(player => {
         return {
           "x": player.pca1,
-          "y": player.pca2
+          "y": player.pca2,
+          "name": player.playerName,
+          "steamId": player.steamID
         }
       })
       playersScatterDataset.push({
         label: `Cluster ${group}`,
         data: data,
-        backgroundColor: randomColor({format: "rgb", luminosity: 'dark'}),
-        pointRadius: 4,
+        backgroundColor: colors[group],
+        pointRadius: 4.5,
         pointHoverRadius: 5
       })
     })
@@ -160,18 +138,28 @@ export function PlayersScreen() {
     setRadarLabels(newCheckedLabels)
   }
 
+  function onClickScatterChart(playerSteamId: string) {
+    if (selectedPlayers.includes(playerSteamId)) {
+      const newSelectedPlayers = selectedPlayers.filter(playerId => playerId !== playerSteamId)
+      setSelectedPlayers(newSelectedPlayers)
+    } else {
+      const newSelectedPlayers = [...selectedPlayers, playerSteamId]
+      setSelectedPlayers(newSelectedPlayers)
+    }
+  }
+
   return (
     <div className="flex flex-col w-screen h-screen pt-2 pb-2 pr-4 pl-4">
       <div className="flex h-3/5">
         <div className="flex w-4/6">
-          <Scatter data={scatterData} />
+          <Scatter data={scatterData} onclickevent={onClickScatterChart} />
         </div>
         <div className="flex w-2/6">
           <Radar data={groupRadarData}/>
         </div>
       </div>
       <div className="flex h-2/5 flex-row-reverse">
-        <div className="flex flex-col gap-12 w-2/6">
+        <div className="flex flex-col gap-4 w-2/6">
           <div>
             <Select
               placeholder="Select Players"
@@ -184,12 +172,15 @@ export function PlayersScreen() {
               onChange={(value) => setSelectedPlayers(value.map(player => player.steamID))}
             />
           </div>
-          <div className="flex flex-col gap-1 overflow-y-scroll w-full h-1/2">
+          <div>
+            <p>asasasa</p>
+          </div>
+          <div className="flex flex-col gap-1 overflow-y-scroll h-1/2 border-2">
             {radarDefaultLabels.map((label, index) => {
               return (
-                <div>
-                  <label htmlFor={label}>{label}</label>
+                <div className="flex items-center m-1">
                   <input
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                     type="checkbox"
                     id={label}
                     name={label}
@@ -197,6 +188,12 @@ export function PlayersScreen() {
                     checked={radarLabels[label]}
                     onChange={handleRadarLabelsChange}
                   />
+                  <label
+                    className="ml-2 text-sm font-medium text-gray-800"
+                    htmlFor={label}
+                  >
+                    {label}
+                  </label>
                 </div>
               )
             })}

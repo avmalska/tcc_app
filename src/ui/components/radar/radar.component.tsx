@@ -39,6 +39,13 @@ const options: ChartOptions<"radar"> = {
       suggestedMax: 10,
       suggestedMin: 1
     }
+  },
+  plugins: {
+    tooltip: {
+      callbacks: {
+
+      }
+    }
   }
 }
 
