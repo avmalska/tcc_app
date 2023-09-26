@@ -3,9 +3,14 @@ import {Player, usePlayerApi} from "../../../hooks/api/players/use-player-api.ho
 import randomColor from 'randomcolor';
 import {Radar, RadarDataset, RadarData, Scatter, ScatterDataset, ScatterData, ScatterDataPoint} from "../../components"
 import Select from "react-dropdown-select"
+import {hexToTransparentHex} from "../../../utils/utils";
+
 
 const radarDefaultLabels = ["kdr", "kpr", "awpKpr", "adr", "aud", "kast",
   "multiKills", "openingRatio", "clutchesRatio", "flashTimeMean", "rating"]
+
+const avaliableClusters = [0, 1, 2, 3, 4]
+const clustersColors = ["#d64949", "#c310e3", "#1b8f83", "#3bf216", "#1f1c1c"]
 
 const radarDataDefault: RadarData = {
   labels: radarDefaultLabels,
@@ -37,8 +42,15 @@ export function PlayersScreen() {
   }, {}))
 
   const [groupRadarData, setGroupRadarData] = useState<RadarData>(radarDataDefault)
-
   const [scatterData, setScatterData] = useState<ScatterData>(scatterDataDefault)
+  const [selectedClusters, setSelectedClusters] = useState<Record<string, boolean>>({
+    "0": false,
+    "1": false,
+    "2": false,
+    "3": false,
+    "4": false
+  })
+  const [clustersMean, setClustersMean] = useState<number[][]>([])
 
   function getPlayerDataFiltered(player: Player) {
     return Object.entries(player).reduce((acumulador: number[], combo) => {
@@ -78,21 +90,34 @@ export function PlayersScreen() {
       borderWidth: 1
     }]
 
+    const clustersRadarDataset: RadarDataset[] = Object.entries(selectedClusters)
+      .filter(selectedCluster => selectedCluster[1])
+      .map(clusterValue => {
+        const clusterIntValue = parseInt(clusterValue[0])
+        return {
+          label: `Cluster ${clusterIntValue}`,
+          data: clustersMean[clusterIntValue],
+          backgroundColor: hexToTransparentHex(clustersColors[clusterIntValue]),
+          borderColor: clustersColors[clusterIntValue],
+          borderWidth: 1
+        }
+      })
+
+    const finalDatasets: RadarDataset[] = playersRadarDataset.concat(groupPlayerRadarDataset).concat(clustersRadarDataset)
+
     setGroupRadarData({
       ...groupRadarData,
       labels: Object.keys(radarLabels).filter(label => radarLabels[label]),
-      datasets: playersRadarDataset.concat(groupPlayerRadarDataset)
+      datasets: finalDatasets
     })
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPlayers, playersList, radarLabels]);
+  }, [selectedPlayers, playersList, radarLabels, selectedClusters]);
 
   useEffect(() => {
-    const clusters = [0, 1, 2, 3, 4];
-    const colors = ["#d64949", "#c310e3", "#1b8f83", "#3bf216", "#1f1c1c"]
     const playersScatterDataset: ScatterDataset[] = []
 
-    clusters.forEach((group) => {
+    avaliableClusters.forEach((group) => {
       const data: ScatterDataPoint[] = playersList.filter(player => player.cluster === group).map(player => {
         return {
           "x": player.pca1,
@@ -104,7 +129,7 @@ export function PlayersScreen() {
       playersScatterDataset.push({
         label: `Cluster ${group}`,
         data: data,
-        backgroundColor: colors[group],
+        backgroundColor: clustersColors[group],
         pointRadius: 4.5,
         pointHoverRadius: 5
       })
@@ -118,17 +143,37 @@ export function PlayersScreen() {
   }, [playersList]);
 
   useEffect(() => {
+    const newClustersMeans: number[][] = []
+    avaliableClusters.forEach(clusterValue => {
+      const playersThisCluster = playersList.filter(player => player.cluster === clusterValue)
+
+      const clusterDatasetValues: number[][] = playersThisCluster.map(player => getPlayerDataFiltered(player))
+
+      const clusterDatasetSum: number[] = clusterDatasetValues.reduce((accumulator, currentArray, currentIndex) => {
+        return currentIndex !== 0 ? accumulator.map((value, index) => (value + currentArray[index])) : clusterDatasetValues[0];
+      }, []);
+
+      const clusterDatasetMean: number[] = clusterDatasetSum.map(value => value / clusterDatasetValues.length)
+
+      newClustersMeans.push(clusterDatasetMean)
+    })
+    setClustersMean(newClustersMeans)
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playersList]);
+
+  useEffect(() => {
     async function getAllPlayersFromPlayersApi(){
       const response = await getAllPlayers();
       return response.map(player => {
-        return {...player, color: randomColor({format: "rgba", alpha: 0.8})}
+        return {...player, color: randomColor({format: "rgba", alpha: 0.5})}
       });
     }
     getAllPlayersFromPlayersApi().then(response => setPlayersList(response));
 
   }, [getAllPlayers])
 
-  function handleRadarLabelsChange(evento: React.ChangeEvent<HTMLInputElement> ) {
+  function handleRadarLabelsChange(evento: React.ChangeEvent<HTMLInputElement>) {
     const { name } = evento.target
     const newCheckedValue = !radarLabels[name]
     const newCheckedLabels = {
@@ -136,6 +181,16 @@ export function PlayersScreen() {
       [name]: newCheckedValue
     }
     setRadarLabels(newCheckedLabels)
+  }
+
+  function handleSelectedClustersChange(evento: React.ChangeEvent<HTMLInputElement>) {
+    const { value } = evento.target
+    const newCheckedValue = !selectedClusters[value]
+    const newCheckedClusters = {
+      ...selectedClusters,
+      [value]: newCheckedValue
+    }
+    setSelectedClusters(newCheckedClusters)
   }
 
   function onClickScatterChart(playerSteamId: string) {
@@ -147,6 +202,7 @@ export function PlayersScreen() {
       setSelectedPlayers(newSelectedPlayers)
     }
   }
+
 
   return (
     <div className="flex flex-col w-screen h-screen pt-2 pb-2 pr-4 pl-4">
@@ -172,8 +228,28 @@ export function PlayersScreen() {
               onChange={(value) => setSelectedPlayers(value.map(player => player.steamID))}
             />
           </div>
-          <div>
-            <p>asasasa</p>
+          <div className="flex flex-row gap-8 justify-center">
+            {Object.keys(selectedClusters).map((cluster, index) => {
+              return (
+                <div className="flex items-center m-1">
+                  <input
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                    type="checkbox"
+                    id={`cluster${cluster}`}
+                    name={`cluster${cluster}`}
+                    value={cluster}
+                    checked={selectedClusters[cluster]}
+                    onChange={handleSelectedClustersChange}
+                  />
+                  <label
+                    className="ml-2 text-sm font-medium text-gray-800"
+                    htmlFor={`cluster${cluster}`}
+                  >
+                    {`Cluster ${cluster}`}
+                  </label>
+                </div>
+              )
+            })}
           </div>
           <div className="flex flex-col gap-1 overflow-y-scroll h-1/2 border-2">
             {radarDefaultLabels.map((label, index) => {
