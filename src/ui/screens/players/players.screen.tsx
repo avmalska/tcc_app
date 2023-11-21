@@ -41,7 +41,6 @@ export function PlayersScreen() {
       [label]: true
     }
   }, {}))
-  const [evaluatedPlayers, setEvaluatedPlayers] = useState<Player[]>([])
 
   const [groupRadarData, setGroupRadarData] = useState<RadarData>(radarDataDefault)
   const [scatterData, setScatterData] = useState<ScatterData>(scatterDataDefault)
@@ -208,7 +207,6 @@ export function PlayersScreen() {
     try {
       const response = await evaluateNewPlayer(values)
       const newPlayer: Player = {...response, color: randomColor({format: "rgba", alpha: 0.5}), evaluated: true}
-      setEvaluatedPlayers([...evaluatedPlayers, newPlayer])
       setPlayersList([...playersList, newPlayer])
     } catch (e) {
       console.log(e)
@@ -216,9 +214,7 @@ export function PlayersScreen() {
   }
 
   function onClickDeletePlayer(playerSteamId: string) {
-    const newEvaluatedPlayers = evaluatedPlayers.filter(player => player.steamID !== playerSteamId)
     const newPlayersList = playersList.filter(player => player.steamID !== playerSteamId)
-    setEvaluatedPlayers(newEvaluatedPlayers)
     setPlayersList(newPlayersList)
   }
 
@@ -379,7 +375,7 @@ export function PlayersScreen() {
           </div>
           <div className="flex gap-4 w-full h-1/2">
             <div className="flex flex-col gap-1 w-2/5 overflow-y-scroll border-2 divide-y p-1">
-              {evaluatedPlayers.map((player, index) => {
+              {playersList.filter(player => player.evaluated).map((player, index) => {
                 return (
                   <div className="flex flex-row gap-2 p-1">
                     <div>
