@@ -42,9 +42,39 @@ export function Scatter({data, onclickevent}: ScatterInput) {
     plugins: {
       tooltip: {
         callbacks: {
-          title(tooltipItem): string | string[] | void {
+          title(tooltipItems): string | string[] | void {
+            return tooltipItems.map(tooltipItem=> {
+              // @ts-ignore
+              return tooltipItem.dataset.data[tooltipItem.dataIndex]["name"];
+            })
+          }
+        }
+      }
+    },
+    elements: {
+      point: {
+        pointStyle(context) {
+          try {
             // @ts-ignore
-            return tooltipItem[0].dataset.data[tooltipItem[0].dataIndex]["name"];
+            return context.dataset.data[context.dataIndex]["evaluated"] ? 'rectRot' : 'circle';
+          } catch (e) {
+            return 'circle'
+          }
+        },
+        drawActiveElementsOnTop(context) {
+          try {
+            // @ts-ignore
+            return context.dataset.data[context.dataIndex]["evaluated"];
+          } catch (e) {
+            return false;
+          }
+        },
+        borderColor(context) {
+          try {
+            // @ts-ignore
+            return context.dataset.data[context.dataIndex]["evaluated"] ? 'black' : 'white';
+          } catch (e) {
+            return 'white'
           }
         }
       }
