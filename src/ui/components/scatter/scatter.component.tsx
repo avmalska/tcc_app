@@ -17,8 +17,6 @@ export type ScatterDataset = {
   label: string,
   data: ScatterDataPoint[]
   backgroundColor: string
-  pointRadius: number
-  pointHoverRadius: number
 }
 
 export type ScatterData = {
@@ -76,6 +74,23 @@ export function Scatter({data, onclickevent}: ScatterInput) {
           } catch (e) {
             return 'white'
           }
+        },
+        radius(context) {
+          try {
+            // @ts-ignore
+            return context.dataset.data[context.dataIndex]["evaluated"] ? 8 : 5;
+          } catch (e) {
+            return 5
+          }
+        },
+        hoverRadius(context) {
+          try {
+            // @ts-ignore
+            return context.dataset.data[context.dataIndex]["evaluated"] ? 8.5 : 5.5;
+          } catch (e) {
+            return 5.5
+          }
+
         }
       }
     }

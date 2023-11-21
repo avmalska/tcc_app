@@ -132,9 +132,7 @@ export function PlayersScreen() {
       playersScatterDataset.push({
         label: `Cluster ${group}`,
         data: data,
-        backgroundColor: clustersColors[group],
-        pointRadius: 5,
-        pointHoverRadius: 5.5
+        backgroundColor: clustersColors[group]
       })
     })
 
