@@ -35,7 +35,8 @@ export interface Player {
   pca1:           number;
   pca2:           number;
   color:          string;
-  evaluated?:      boolean;
+  selected:      boolean;
+  evaluated:      boolean;
 }
 
 export interface NewPlayerValues {

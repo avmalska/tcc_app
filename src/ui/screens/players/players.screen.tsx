@@ -4,7 +4,7 @@ import randomColor from 'randomcolor';
 import {Radar, RadarDataset, RadarData, Scatter, ScatterDataset, ScatterData, ScatterDataPoint} from "../../components"
 import Select from "react-dropdown-select"
 import {hexToTransparentHex} from "../../../utils/utils";
-import {Formik, Field, Form, FormikHelpers} from "formik";
+import {Formik, Field, Form} from "formik";
 
 
 const radarDefaultLabels = ["kdr", "kpr", "awpKpr", "adr", "aud", "kast",
@@ -34,13 +34,14 @@ export function PlayersScreen() {
 
   const {getAllPlayers, evaluateNewPlayer} = usePlayerApi();
   const [playersList, setPlayersList] = useState<Player[]>([])
-  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([])
   const [radarLabels, setRadarLabels] = useState<Record<string, boolean>>(radarDefaultLabels.reduce((acumulador, label) => {
     return {
       ...acumulador,
       [label]: true
     }
   }, {}))
+  const [dopplegangerPlayerSteamId, setDopplegangerPlayerSteamId] = useState<string>("")
+  const [playerDopplegangers, setPlayerDopplegangers] = useState<string[]>([])
 
   const [groupRadarData, setGroupRadarData] = useState<RadarData>(radarDataDefault)
   const [scatterData, setScatterData] = useState<ScatterData>(scatterDataDefault)
@@ -60,7 +61,7 @@ export function PlayersScreen() {
   }
 
   useEffect(() => {
-    const playersSelected = playersList.filter(player => selectedPlayers.includes(player.steamID))
+    const playersSelected = playersList.filter(player => player.selected)
 
     const playersRadarDataset: RadarDataset[] = playersSelected.map((player => {
       const playerDataFiltered: number[] = getPlayerDataFiltered(player)
@@ -113,7 +114,7 @@ export function PlayersScreen() {
     })
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPlayers, playersList, radarLabels, selectedClusters]);
+  }, [playersList, radarLabels, selectedClusters]);
 
   useEffect(() => {
     const playersScatterDataset: ScatterDataset[] = []
@@ -125,7 +126,8 @@ export function PlayersScreen() {
           "y": player.pca2,
           "name": player.playerName,
           "steamId": player.steamID,
-          "evaluated": player.evaluated
+          "evaluated": player.evaluated,
+          "selected": player.selected
         }
       })
       playersScatterDataset.push({
@@ -166,7 +168,7 @@ export function PlayersScreen() {
     async function getAllPlayersFromPlayersApi(){
       const response = await getAllPlayers();
       return response.map(player => {
-        return {...player, color: randomColor({format: "rgba", alpha: 0.5}), evaluated: false}
+        return {...player, color: randomColor({format: "rgba", alpha: 0.5}), selected: false, evaluated: false}
       });
     }
     getAllPlayersFromPlayersApi().then(response => setPlayersList(response));
@@ -194,19 +196,31 @@ export function PlayersScreen() {
   }
 
   function onClickScatterChart(playerSteamId: string) {
-    if (selectedPlayers.includes(playerSteamId)) {
-      const newSelectedPlayers = selectedPlayers.filter(playerId => playerId !== playerSteamId)
-      setSelectedPlayers(newSelectedPlayers)
-    } else {
-      const newSelectedPlayers = [...selectedPlayers, playerSteamId]
-      setSelectedPlayers(newSelectedPlayers)
-    }
+    const newPlayerListWithSelected = playersList.map(player => {
+      if (player.steamID === playerSteamId) {
+        return {...player, selected: !player.selected}
+      } else {
+        return player
+      }
+    })
+    setPlayersList(newPlayerListWithSelected)
+  }
+
+  function onChangesDropdownSelectedPlayers(values: Player[]) {
+    console.log("change")
+    console.log(values)
+    const valuesSteamIds = values.map(value => value.steamID)
+    const newPlayerListWithChanges: Player[] = playersList.map(player => {
+      console.log(valuesSteamIds.includes(player.steamID))
+      return {...player, selected: valuesSteamIds.includes(player.steamID)}
+    })
+    setPlayersList(newPlayerListWithChanges)
   }
 
   async function onFormSubmit(values: NewPlayerValues) {
     try {
       const response = await evaluateNewPlayer(values)
-      const newPlayer: Player = {...response, color: randomColor({format: "rgba", alpha: 0.5}), evaluated: true}
+      const newPlayer: Player = {...response, color: randomColor({format: "rgba", alpha: 0.5}), selected: false, evaluated: true}
       setPlayersList([...playersList, newPlayer])
     } catch (e) {
       console.log(e)
@@ -218,6 +232,25 @@ export function PlayersScreen() {
     setPlayersList(newPlayersList)
   }
 
+  function handleDopplegangerPlayerChange(values: Player[]) {
+    setDopplegangerPlayerSteamId(values[0].steamID)
+  }
+
+  function calculateEuclideanDistances(playerSteamID: string) {
+    const playerToUse = playersList.filter(player => player.steamID === playerSteamID)[0]
+    console.log(playerToUse.playerName)
+    const playerPCA = [playerToUse.pca1, playerToUse.pca2]
+    const otherPlayersPCA:[number, number, string][] = playersList.filter(player => player.steamID !== playerSteamID).map(otherPlayer => [otherPlayer.pca1, otherPlayer.pca2, otherPlayer.playerName])
+    const distances: [number, string][] = otherPlayersPCA.map(otherPlayerPCA => {
+      const distance = Math.sqrt((Math.pow((playerPCA[0] - otherPlayerPCA[0]), 2)) + (Math.pow((playerPCA[1] - otherPlayerPCA[1]), 2)))
+      return [distance, otherPlayerPCA[2]]
+    })
+    const orderedDistances = distances.sort((a, b) => a[0] - b[0])
+    console.log(orderedDistances.slice(0, 5))
+    const dopplegangers = orderedDistances.slice(0, 5).map(doppleganger => doppleganger[1])
+
+    setPlayerDopplegangers(dopplegangers)
+  }
 
   return (
     <div className="flex flex-col w-screen h-screen pt-2 pb-2 pr-4 pl-4">
@@ -239,8 +272,8 @@ export function PlayersScreen() {
               labelField={"playerName"}
               valueField={"steamID"}
               searchBy={"playerName"}
-              values={playersList.filter((player) => selectedPlayers.includes(player.steamID))}
-              onChange={(value) => setSelectedPlayers(value.map(player => player.steamID))}
+              values={playersList.filter(player => player.selected)}
+              onChange={(value) => onChangesDropdownSelectedPlayers(value)}
             />
           </div>
           <div className="flex flex-row gap-8 justify-center">
@@ -390,7 +423,34 @@ export function PlayersScreen() {
               })}
             </div>
             <div className="flex w-3/5 border-2">
-
+              <div className="flex w-1/3 justify-center items-center">
+                <div className="flex flex-col gap-2 justify-center items-center">
+                  <Select
+                    style={{width: "220px", minWidth: "220px", maxWidth: "220px"}}
+                    placeholder="Find player dopplegangers"
+                    options={playersList}
+                    labelField={"playerName"}
+                    valueField={"steamID"}
+                    searchBy={"playerName"}
+                    values={playersList.filter(player => player.steamID === dopplegangerPlayerSteamId)}
+                    dropdownPosition={"top"}
+                    backspaceDelete={false}
+                    onChange={(value) => handleDopplegangerPlayerChange(value)}
+                  />
+                  <button className="text-white bg-blue-500 hover:bg-blue-600 rounded-lg text-center p-1" onClick={() => calculateEuclideanDistances(dopplegangerPlayerSteamId)}>Find Dopplegangers</button>
+                </div>
+              </div>
+              <div className="flex flex-col justify-center ">
+               <div className="flex flex-wrap gap-8 justify-center items-center h-2/5">
+                 {playerDopplegangers.map((label, index) => {
+                    return (
+                      <div className="border-2 p-1">
+                        <p>{label}</p>
+                      </div>
+                    )
+                 })}
+               </div>
+              </div>
             </div>
           </div>
         </div>

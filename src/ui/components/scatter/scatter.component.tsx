@@ -11,7 +11,7 @@ import {ChartProps, Scatter as ScatterPlot} from 'react-chartjs-2';
 
 ChartJS.register(LinearScale, PointElement, LineElement, Tooltip, Legend);
 
-export type ScatterDataPoint = {x: number, y: number, name: string, steamId: string}
+export type ScatterDataPoint = {x: number, y: number, name: string, steamId: string, evaluated: boolean, selected: boolean}
 
 export type ScatterDataset = {
   label: string,
@@ -78,7 +78,7 @@ export function Scatter({data, onclickevent}: ScatterInput) {
         radius(context) {
           try {
             // @ts-ignore
-            return context.dataset.data[context.dataIndex]["evaluated"] ? 8 : 5;
+            return context.dataset.data[context.dataIndex]["selected"] ? 8 : 5;
           } catch (e) {
             return 5
           }
@@ -86,7 +86,7 @@ export function Scatter({data, onclickevent}: ScatterInput) {
         hoverRadius(context) {
           try {
             // @ts-ignore
-            return context.dataset.data[context.dataIndex]["evaluated"] ? 8.5 : 5.5;
+            return context.dataset.data[context.dataIndex]["selected"] ? 8.5 : 5.5;
           } catch (e) {
             return 5.5
           }
